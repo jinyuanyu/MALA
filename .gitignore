@@ -28,7 +28,6 @@ checkpoints/
 
 # Jupyter
 .ipynb_checkpoints
-*.ipynb
 
 # IDE
 .vscode/
@@ -57,3 +56,9 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# Local remote-sensing datasets and generated assets
+S2_Daily_Mosaic_Masked/
+rgb_S2_Daily_Mosaic/
+*.nc
+integrated_vmae/__pycache__/

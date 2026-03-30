@@ -1,293 +1,252 @@
-# MALA: Masked Autoencoder for Remote Sensing Image Completion
+# MALA: 面向遥感影像光谱插补的时空协同生成框架
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.8%2B-blue.svg" alt="Python">
-  <img src="https://img.shields.io/badge/PyTorch-2.0%2B-red.svg" alt="PyTorch">
-  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
-</p>
+> A temporal-spatial collaborative framework for remote sensing image spectral interpolation and reconstruction.
 
-## 项目简介 | Introduction
+## 项目概述
 
-MALA (Masked Autoencoder for Remote Sensing Image Completion) 是一个基于深度学习的遥感图像缺失区域填补与插补框架。该项目实现了多种先进的时间序列插补算法，包括基于Transformer的掩码自编码器 (Masked Autoencoder, MAE) 架构，以及多种传统插值方法。
+遥感影像在华南沿海等多云多雨地区常常受到云覆盖、条带缺失和复杂大气条件的影响，导致长时序观测中存在大面积缺失区域。传统方法通常只依赖空间邻域或时间连续性中的单一信息，难以同时兼顾快速变化区域的时序规律与高异质区域的空间纹理细节。
 
-MALA is a deep learning framework for remote sensing image completion and interpolation. This project implements various advanced time-series interpolation algorithms, including Masked Autoencoder (MAE) architecture based on Transformer and multiple traditional interpolation methods.
+本项目围绕这一问题，构建了两类核心方法：
 
-## 主要特性 | Key Features
+- `EMAE`：融合时序注意力与空间卷积的增强型掩码自编码器，用于在小样本条件下学习遥感影像的时序补全规律。
+- `MALA`：在 `EMAE` 基础上，进一步结合 `LaMA` 的局部纹理修复能力，构建时空协同插补框架，在高空间异质和高缺失比例场景下获得更稳定的重建结果。
 
-- **深度学习模型**: 基于Transformer的MAE架构，支持时空特征学习
-- **多算法支持**: 集成DINEOF、样条插值、最近邻、IDW、克里金等经典方法
-- **完整实验流程**: 包含数据处理、模型训练、评估、可视化全流程
-- **丰富的可视化**: 热力图、时序图、散点图、箱线图等多种分析图表
-- **模块化设计**: 清晰的代码结构，便于扩展和定制
+项目重点面向珠江口及华南沿海典型区域，使用 Sentinel-2 可见光三波段数据开展光谱插补实验，目标是在复杂缺失模式下实现更高的时序一致性、空间细节恢复能力和物理可信度。
 
-## 目录结构 | Directory Structure
+## 方法思想
 
+### 1. 问题定义
+
+本项目关注三类典型遥感缺失场景：
+
+- `云覆盖缺失`：模拟不规则云块对观测的遮挡。
+- `条带缺失`：模拟传感器故障或扫描异常导致的条带空洞。
+- `混合缺失`：同时包含云雾与条带，对模型鲁棒性要求更高。
+
+模型输入为时序遥感影像及其对应掩码，输出为重建后的完整图像序列，并在缺失区域计算重建质量指标。
+
+### 2. EMAE：时序建模为主的增强 MAE
+
+EMAE 的核心思想是让模型不仅“看到缺哪里”，还要“理解时间上应该如何变化”。论文中的方法设计主要包含以下几部分：
+
+- `多尺度 Patch 表征`：支持以不同 patch 尺度组织输入，以适配建筑、海洋、农田等不同尺度地物。
+- `时序注意力建模`：在编码器中显式引入时间维注意力，捕捉短期快速变化与长距离时序依赖。
+- `时序先验偏置`：通过时序变化强度信息为注意力计算提供额外引导，提升小样本场景下的补全能力。
+- `预训练-微调策略`：先迁移自然图像中的通用视觉特征，再在遥感数据上微调，以缓解样本不足问题。
+- `空间卷积增强`：在 MAE 框架中引入卷积结构，提升局部纹理表达能力。
+
+从算法定位上看，EMAE 更强调“时间连续性是否合理”，尤其适合大范围缺失、短时变化显著、训练样本有限的遥感时序插补任务。
+
+### 3. MALA：MAE 与 LaMA 的时空协同
+
+MALA 进一步解决了“仅靠时序插补难以恢复高异质纹理细节”的问题。整体思想是先判断缺失区域更适合时间补全还是空间修复，再按区域采用不同策略：
+
+- `变化区域划分`：基于变化向量分析（CVA）与 Otsu 阈值分割，将缺失区域划分为时序稳定与时序不稳定区域。
+- `地物与地形先验引导`：结合海陆掩码及场景先验，辅助模型区分平稳区域与高异质区域。
+- `EMAE 补时序`：对于更适合沿时间轴恢复的区域，由 EMAE 完成时序插补。
+- `SimpleLaMA 修纹理`：对于空间结构复杂、局部纹理损失严重的区域，由 LaMA 进行空间精细修复。
+- `协同重建`：最终将两类结果融合，兼顾时序一致性与空间细节。
+
+简而言之，`EMAE` 解决“时间上应该长成什么样”，`MALA` 进一步解决“空间上应该看起来像什么样”。
+
+## 结构示意
+
+下图对应的算法框架可以概括为“多尺度卷积编码 + 时序注意力建模 + 先验引导 + 转置卷积解码 + LaMA 局部协同修复”：
+
+```mermaid
+flowchart LR
+    A["输入序列<br/>RGB + Mask"] --> B["多尺度卷积编码<br/>4x4 / 8x8 / 16x16 Patch"]
+    B --> C["特征拼接"]
+    C --> D["时序注意力层<br/>Temporal Attention"]
+    P1["时序先验"] --> D
+    D --> E["Transformer Blocks x3"]
+    E --> F["转置卷积解码"]
+    P2["地形/海陆先验"] --> F
+    F --> G["EMAE 重建结果"]
+    G --> H["变化区域划分<br/>CVA + Otsu"]
+    H --> I["时序稳定区域 -> EMAE"]
+    H --> J["空间异质区域 -> SimpleLaMA"]
+    I --> K["结果融合"]
+    J --> K
+    K --> L["输出重建影像"]
 ```
+
+## 结果解读
+
+从你给出的误差热力图与可视化重建结果可以直观看到以下规律：
+
+- `MALA` 的误差分布最集中、热点最少，在关注区域内的重建更平滑且边界更自然。
+- `EMAE` 在多数场景下紧随其后，说明时序注意力对遥感缺失恢复是有效的。
+- `LaMA` 能恢复一定局部结构，但在大面积遥感缺失下容易出现时序不一致或颜色漂移。
+- `Nearest Neighbor (NN)` 在纹理复杂和缺失范围较大时会产生明显块状伪影，视觉质量最弱。
+
+### 代表性对比结果
+
+根据你提供的图示样例，几个典型场景中的 PSNR 表现如下：
+
+| 场景 | MALA | EMAE | LaMA | NN |
+|------|------:|------:|------:|------:|
+| 城市局部区域样例 | 32.601 | 30.760 | 16.956 | 16.601 |
+| 场景 A | 33.245 | 30.620 | 19.864 | 18.723 |
+| 场景 B | 30.681 | 28.678 | 18.459 | 16.624 |
+| 场景 C | 29.945 | 26.545 | 18.566 | 16.974 |
+| 场景 D | 29.336 | 24.173 | 18.575 | 16.402 |
+
+这些结果说明：
+
+- `MALA` 在多个样例中都保持最优。
+- `EMAE` 相较纯空间方法有稳定优势，证明时序生成建模是有效的。
+- 当缺失范围扩大、区域异质性增强时，`MALA` 的优势更明显。
+
+## 数据与实验设置
+
+### 研究区域
+
+论文实验聚焦于 `珠江口（Pearl River Estuary, PRE）` 及其近岸区域。这一区域具有以下特征：
+
+- 云雾遮挡频繁，影像有效观测时刻稀少。
+- 海陆交错明显，空间异质性高。
+- 近岸海域光谱变化快，传统平滑插值方法难以建模。
+
+### 数据来源
+
+- `Sentinel-2 Level-2A Surface Reflectance`
+- 可见光三波段：`B2 (490nm)`、`B3 (560nm)`、`B4 (665nm)`
+- `MODIS` 陆地覆盖产品用于海陆掩码生成
+
+### 缺失模式模拟
+
+项目中重点考虑三类模拟缺失机制：
+
+- `thin_cloud / cloud`：模拟不同尺度和不同强度的云遮挡
+- `strip`：模拟传感器条带异常
+- `mixed`：叠加多种缺失机制，逼近真实复杂场景
+
+## 仓库结构
+
+```text
 MALA/
-├── models/                 # 深度学习模型定义
-│   ├── __init__.py
-│   ├── mae_lama.py        # 主模型：MAE-LaMa
-│   └── components/         # 模型组件
-├── data/                   # 数据加载与处理
-│   ├── __init__.py
-│   └── datasets.py         # 数据集定义
-├── utils/                  # 工具函数
-│   ├── __init__.py
-│   ├── metrics.py          # 评估指标
-│   └── visualization.py    # 可视化工具
-├── experiments/            # 实验脚本
-│   ├── train.py           # 训练脚本
-│   ├── evaluate.py        # 评估脚本
-│   └── run_experiments.py # 实验运行
-├── scripts/               # 辅助脚本
-│   ├── data_preprocessing.py
-│   └── analysis.py
-├── docs/                  # 详细文档
-│   ├── installation.md
-│   ├── usage.md
-│   └── api.md
-├── configs/               # 配置文件
-│   └── default.yaml
-├── requirements.txt        # 依赖
-└── README.md             # 本文件
+├── data/                         # 数据集读取与掩码组织
+├── models/                       # 模型结构定义
+├── utils/                        # 指标、可视化、辅助函数
+├── train.py                      # 根目录 MALA 训练入口
+├── inference.py                  # 根目录 MALA 推理入口
+├── MAE_LaMa.py                   # 原始实验主脚本/研究型实现
+├── error_heatmap.py              # 误差热力图分析
+├── metrics_results.py            # PSNR/SSIM/MAE 汇总
+├── crop_img.py                   # 感兴趣区域裁剪
+├── Scatter_one_to_one.py         # 一对一散点图分析
+├── time_analysis_Crops.py        # 时序区域分析
+├── integrated_vmae/              # 并入的 VMAE 完整整合版代码
+└── README.md
 ```
 
-## 安装 | Installation
+如果你希望使用完整的一体化流水线，包括 `preprocess / train / finetune / infer / analyze` 五阶段统一入口，建议优先查看：
 
-### 环境要求
+- `integrated_vmae/vmae_pipeline.py`
 
-- Python >= 3.8
-- PyTorch >= 2.0
-- CUDA >= 11.0 (GPU支持)
+如果你希望从当前 MALA 主干代码出发进行训练与推理，建议优先查看：
 
-### 安装步骤
+- `train.py`
+- `inference.py`
+
+## 快速开始
+
+### 1. 环境配置
+
+建议使用 Conda：
 
 ```bash
-# 1. 克隆仓库
-git clone https://github.com/jinyuanyu/MALA.git
-cd MALA
-
-# 2. 创建虚拟环境
-conda create -n mala python=3.9
+conda create -n mala python=3.10
 conda activate mala
-
-# 3. 安装依赖
 pip install -r requirements.txt
-
-# 4. (可选) 安装PyTorch CUDA版本
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 ```
 
-## 快速开始 | Quick Start
+如果你准备运行整合版流水线，还可以参考：
 
-### 1. 数据准备
-
-将您的遥感数据整理为以下格式：
-
-```
-data/
-├── S2_Daily_Mosaic/           # 原始图像序列
-│   ├── 20230101.png
-│   ├── 20230102.png
-│   └── ...
-└── masks/                     # 掩码文件
-    ├── mask_01.png
-    └── ...
+```bash
+cd integrated_vmae
+pip install -r requirements.txt
 ```
 
-### 2. 运行训练
+### 2. 数据准备
 
-```python
-from models.mae_lama import VideoCompletionModel
-from data.datasets import RemoteSensingDataset
-from experiments.train import train_model
+代码默认围绕遥感时序影像、掩码图像、海陆先验组织数据。常见输入包括：
 
-# 1. 加载数据
-dataset = RemoteSensingDataset(
-    data_dir='data/your_data/',
-    max_seq_len=8
-)
+- 原始遥感影像序列
+- 缺失掩码或预定义 mask
+- 海陆掩码 / ocean mask
+- 可选的 LaMA 初始修复结果
 
-# 2. 初始化模型
-model = VideoCompletionModel(
-    in_channels=3,
-    out_channels=3,
-    hidden_dim=256,
-    num_heads=8,
-    num_layers=6
-)
+当前仓库中已包含部分示例数据与影像文件，例如：
 
-# 3. 训练模型
-train_model(model, dataset, epochs=100)
+- `S2_Daily_Mosaic_Masked/`
+- `rgb_S2_Daily_Mosaic/`
+
+### 3. 训练
+
+使用根目录 MALA 版本训练：
+
+```bash
+python train.py \
+  --data_dir /path/to/data \
+  --ocean_mask_path /path/to/ocean_mask.png \
+  --epochs 100 \
+  --batch_size 4 \
+  --lr 1e-4
 ```
 
-### 3. 运行评估
+### 4. 推理
 
-```python
-from experiments.evaluate import evaluate_model
-
-results = evaluate_model(
-    model=model,
-    test_dataset=test_dataset,
-    methods=['Proposed', 'DINEOF', 'Spline', 'Nearest_Neighbor']
-)
-
-print(f"SSIM: {results['SSIM']:.4f}")
-print(f"PSNR: {results['PSNR']:.2f}")
-print(f"MAE: {results['MAE']:.2f}")
+```bash
+python inference.py \
+  --model_path ./fine_tuned_model.pth \
+  --data_dir /path/to/test_data \
+  --ocean_mask_path /path/to/ocean_mask.png \
+  --mask_type mixed \
+  --mask_ratio 0.3 \
+  --output_dir ./results \
+  --save_images \
+  --save_visualization
 ```
 
-## 支持的算法 | Supported Algorithms
+### 5. 分析与可视化
 
-### 深度学习方法
+项目中提供了多种面向论文和结果解释的分析脚本：
 
-| 算法名称 | 描述 | 论文 |
-|---------|------|------|
-| **MALA** | 掩码自编码器方法 | 原创 |
-| **Proposed** | 提出的深度学习方法 | - |
-| **MaskAE** | 掩码自编码器 | - |
+- `error_heatmap.py`：生成误差热力图
+- `metrics_results.py`：批量计算 PSNR / SSIM / MAE
+- `crop_img.py`：裁剪感兴趣区域
+- `Scatter_one_to_one.py`：绘制学术风格一对一散点图
+- `time_analysis_Crops.py`：分析局部区域的时序变化
 
-### 传统插值方法
+## 项目亮点
 
-| 算法名称 | 描述 | 特点 |
-|---------|------|------|
-| **DINEOF** | 数据插值正交函数法 | 适合大范围时空缺失 |
-| **Spline** | 三次样条插值 | 时间序列平滑 |
-| **Nearest Neighbor** | 最近邻插值 | 计算简单快速 |
-| **IDW** | 反距离加权插值 | 空间局部性 |
-| **Kriging** | 克里金插值 | 地统计学最优 |
+- `面向真实遥感缺失场景`：不是简单随机缺失，而是重点面向云、条带和混合遮挡。
+- `时序与空间协同建模`：EMAE 负责建模时间变化，MALA 进一步引入空间纹理修复。
+- `适配小样本遥感任务`：采用预训练迁移、先验引导与微调策略提升小样本表现。
+- `兼顾定量与定性分析`：不仅输出 PSNR / SSIM / MAE，也支持热力图、裁剪区域和时序分析。
 
-## 评估指标 | Metrics
+## 适用场景
 
-- **SSIM**: 结构相似性指数
-- **PSNR**: 峰值信噪比
-- **MAE**: 平均绝对误差
-- **TCC**: 时间相关系数
+- 多云雨地区的光学遥感影像修复
+- 珠江口、近岸海域等高动态水色遥感监测
+- 农田、城市与海岸带交错区域的时序影像补全
+- 面向赤潮预警、农田监测、海洋生态监测的上游数据重建
 
-## 可视化示例 | Visualization Examples
+## 后续方向
 
-项目提供丰富的可视化功能：
+项目当前已完成 EMAE 与 MALA 两条主线的实验实现。后续可以继续扩展：
 
-```python
-# 1. 误差热力图
-from utils.visualization import plot_error_heatmap
+- 更强的物理约束与光谱一致性校验
+- 面向更长时序序列的高效 Transformer 建模
+- 扩展到更多波段或多源遥感联合重建
+- 将误差估计与不确定性量化纳入统一框架
 
-plot_error_heatmap(results, save_path='error_heatmap.png')
+## 引用
 
-# 2. 时序对比图
-from utils.visualization import plot_timeseries
+如果本项目对你的研究有帮助，欢迎在学术工作中引用相关论文或说明本仓库的使用来源。
 
-plot_timeseries(pixel_data, missing_regions, save_path='timeseries.png')
+## 致谢
 
-# 3. 箱线图比较
-from utils.visualization import plot_boxplot
-
-plot_boxplot(all_metrics, save_path='boxplot.png')
-
-# 4. 散点图
-from utils.visualization import plot_scatter
-
-plot_scatter(ground_truth, predictions, save_path='scatter.png')
-```
-
-## 实验配置 | Experiment Configuration
-
-支持多种实验设置：
-
-```yaml
-# configs/experiment.yaml
-experiment:
-  name: "remote_sensing_interpolation"
-  
-  # 数据配置
-  data:
-    data_dir: "data/S2_Daily_Mosaic/"
-    mask_dir: "data/masks/"
-    max_seq_len: 8
-    image_size: [256, 256]
-  
-  # 模型配置
-  model:
-    name: "MAE-LaMa"
-    hidden_dim: 256
-    num_heads: 8
-    num_layers: 6
-    dropout: 0.1
-  
-  # 训练配置
-  training:
-    epochs: 100
-    batch_size: 4
-    learning_rate: 0.0001
-    optimizer: "Adam"
-  
-  # 评估配置
-  evaluation:
-    metrics: ["SSIM", "PSNR", "MAE", "TCC"]
-    methods: ["Proposed", "DINEOF", "Spline"]
-```
-
-## 文档 | Documentation
-
-详细的文档请参阅 [docs/](docs/) 目录：
-
-- [安装指南](docs/installation.md) - 环境配置与依赖安装
-- [使用教程](docs/usage.md) - 完整的使用流程
-- [API文档](docs/api.md) - 详细的API说明
-- [算法说明](docs/algorithms.md) - 各算法的原理介绍
-
-## 常见问题 | FAQ
-
-### Q: 如何使用自己的数据集？
-
-A: 请参考 [数据准备指南](docs/usage.md#数据准备) 创建与项目兼容的数据格式。
-
-### Q: 支持哪些图像格式？
-
-A: 支持 PNG、JPG、TIFF 等常见图像格式。
-
-### Q: 如何在CPU上运行？
-
-A: 模型支持CPU和GPU运行，只需将模型和数据放到CPU设备上即可。
-
-### Q: 如何添加新的插值算法？
-
-A: 请参考 [扩展指南](docs/usage.md#添加新算法) 添加自定义算法。
-
-## 贡献 | Contributing
-
-欢迎提交Pull Request或Issue！
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送分支 (`git push origin feature/amazing-feature`)
-5. 打开Pull Request
-
-## 许可证 | License
-
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
-
-## 引用 | Citation
-
-如果您使用了本项目，请引用：
-
-```bibtex
-@software{MALA,
-  title = {MALA: Masked Autoencoder for Remote Sensing Image Completion},
-  author = {Jin Yuanyu},
-  year = {2024},
-  url = {https://github.com/jinyuanyu/MALA}
-}
-```
-
-## 联系方式 | Contact
-
-- GitHub Issues: https://github.com/jinyuanyu/MALA/issues
-- Email: jinyuanyu@example.com
-
----
-
-<p align="center">
-  如果您觉得这个项目有帮助，请给我们一个 ⭐️！
-</p>
+本项目围绕遥感影像光谱插补与外推问题开展，研究思路来自于对珠江口等高动态、强遮挡场景下时空协同建模问题的持续探索。欢迎交流、复现与进一步改进。
