@@ -291,8 +291,7 @@ def print_statistics_table(all_stats):
     print("="*50)
 
 
-# ============ 使用示例 ============
-if __name__ == "__main__":
+def parse_args_and_run():
     parser = argparse.ArgumentParser(description="绘制 1:1 学术散点图")
     parser.add_argument("--reference-image-path", default='./rgb_S2_Daily_Mosaic/pseudo_color_doy_019.png')
     parser.add_argument("--reconstructed-image-path", default='./experiment_results/exp1_missing_types/thick_cloud/images/MALA/mala_inpainted_frame00.png')
@@ -315,3 +314,7 @@ if __name__ == "__main__":
     
     print_statistics_table(stats)
     plt.show()
+
+
+if __name__ == "__main__":
+    parse_args_and_run()

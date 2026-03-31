@@ -467,8 +467,7 @@ class ImageAnalyzer:
         plt.tight_layout()
         plt.show()
 
-# 使用示例
-if __name__ == "__main__":
+def parse_args_and_run():
     parser = argparse.ArgumentParser(description="裁剪实验结果中的兴趣区域")
     parser.add_argument("--experiment-root", default="E:/lama/experiment_results")
     parser.add_argument("--output-dir", default="E:/lama/error_heatmap_cropped_images")
@@ -492,3 +491,7 @@ if __name__ == "__main__":
     print("1. 原始图像组：裁剪后的原始图像 + 带标记的原始图像")
     print("2. Masked图像组：裁剪后的masked图像 + 带标记的masked图像")
     print("3. 算法结果图像组：各算法的裁剪结果 + 各算法的带标记图像")
+
+
+if __name__ == "__main__":
+    parse_args_and_run()

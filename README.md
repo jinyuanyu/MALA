@@ -122,15 +122,21 @@
 - `models/` 负责模型结构与核心组件
 - `utils/` 负责指标与可视化
 - `engine/` 负责配置对象、构建器、损失函数、训练循环与推理循环
-- `analysis/` 负责分析脚本共享的目录遍历、算法映射与结果解析
+- `analysis/` 负责分析脚本共享能力，以及热力图与指标统计等正式分析实现
 - `legacy/` 负责统一归档已经被模块化吸收的旧入口与旧脚本实现
 
-根目录中的 `MAE_LaMa.py`、`error_heatmap.py`、`metrics_results.py` 等文件现在只承担“兼容入口”的职责，便于旧命令、旧 notebook 和历史实验脚本继续运行。新的开发和扩展，建议优先从下面这些模块目录进入：
+当前根目录已经进一步收缩，兼容入口统一整理到了 `bin/`。新的开发和扩展，建议优先从下面这些模块目录进入：
 
 - 训练与推理逻辑优先查看 `engine/`
 - 数据读取与掩码策略优先查看 `data/`
 - 指标统计与结果分析优先查看 `analysis/`
 - 历史实现与旧版流程统一查看 `legacy/`
+- 兼容命令入口统一查看 `bin/`
+
+当前已经完成主实现迁移的分析模块包括：
+
+- `analysis/heatmap.py`
+- `analysis/metrics.py`
 
 如果你希望使用统一流水线入口，优先查看：
 
@@ -140,7 +146,10 @@
 
 - `train.py`
 - `inference.py`
-- `MAE_LaMa.py`
+
+如果你仍然需要旧命令或旧脚本入口，统一从下面目录调用：
+
+- `bin/`
 
 如果你希望查看研究过程中的 notebook，统一查看：
 
@@ -155,20 +164,15 @@ MALA/
 ├── docs/figures/                    # README 使用的三张核心图
 ├── docs/MODULARIZATION.md           # 模块化结构说明
 ├── notebooks/                       # 研究与调试 notebook
+├── bin/                             # 兼容命令入口
 ├── data/                            # 数据读取与数据集定义
 ├── models/                          # 主模型组件
 ├── utils/                           # 指标与可视化工具
 ├── engine/                          # 训练/推理/配置/构建器
 ├── analysis/                        # 分析脚本共享辅助模块
 ├── legacy/                          # 旧入口与历史脚本归档
-├── MAE_LaMa.py                      # 根目录兼容壳
 ├── train.py                         # 模块化后的训练入口
 ├── inference.py                     # 模块化后的推理入口
-├── error_heatmap.py                 # 根目录兼容壳
-├── metrics_results.py               # 根目录兼容壳
-├── crop_img.py                      # 根目录兼容壳
-├── Scatter_one_to_one.py            # 根目录兼容壳
-├── time_analysis_Crops.py           # 根目录兼容壳
 └── integrated_vmae/                 # 整合后的完整流程版本
 ```
 
@@ -200,6 +204,15 @@ python train.py
 
 ```bash
 python inference.py
+```
+
+### 3.1 兼容脚本入口
+
+如果你需要旧分析脚本或历史命令入口，统一从 `bin/` 运行，例如：
+
+```bash
+python bin/error_heatmap.py --help
+python bin/metrics_results.py --help
 ```
 
 ### 4. 统一流水线
