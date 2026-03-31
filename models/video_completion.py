@@ -12,8 +12,11 @@ MALA项目主模型定义
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 from einops import rearrange
 from typing import Optional, Tuple, List
+from PIL import Image
+from torchvision import transforms
 from .modules import PatchEmbedding, TemporalAttention, PatchDecoder, MAEEncoderBlock
 
 
@@ -491,14 +494,6 @@ class VideoCompletionModel(nn.Module):
             return final_result
         else:
             return mae_reconstructed
-
-
-# 导入必要的类型和模块
-from typing import Optional
-import numpy as np
-from PIL import Image
-from torchvision import transforms
-
 
 def create_model(config: dict) -> VideoCompletionModel:
     """

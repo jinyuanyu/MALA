@@ -15,11 +15,14 @@ from .modules import (
     FeedForward,
     MAEEncoderBlock
 )
+from .video_completion import VideoCompletionModel, create_model
 
 __all__ = [
     'PatchEmbedding',
     'TemporalAttention', 
     'PatchDecoder',
     'FeedForward',
-    'MAEEncoderBlock'
+    'MAEEncoderBlock',
+    'VideoCompletionModel',
+    'create_model'
 ]

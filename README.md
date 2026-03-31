@@ -116,6 +116,13 @@
 - 多方法指标统计
 - 误差热力图、裁剪区域和时序分析
 
+当前主干代码已经按 `data / models / utils / engine` 进行了模块化整理：
+
+- `data/` 负责数据集与掩码组织
+- `models/` 负责模型结构与核心组件
+- `utils/` 负责指标与可视化
+- `engine/` 负责配置对象、构建器、损失函数、训练循环与推理循环
+
 如果你希望使用统一流水线入口，优先查看：
 
 - `integrated_vmae/vmae_pipeline.py`
@@ -132,12 +139,14 @@
 MALA/
 ├── README.md
 ├── docs/figures/                    # README 使用的三张核心图
+├── docs/MODULARIZATION.md           # 模块化结构说明
 ├── data/                            # 数据读取与数据集定义
 ├── models/                          # 主模型组件
 ├── utils/                           # 指标与可视化工具
-├── MAE_LaMa.py                      # 研究型主脚本
-├── train.py                         # 训练入口
-├── inference.py                     # 推理入口
+├── engine/                          # 训练/推理/配置/构建器
+├── MAE_LaMa.py                      # 原始研究型主脚本
+├── train.py                         # 模块化后的训练入口
+├── inference.py                     # 模块化后的推理入口
 ├── error_heatmap.py                 # 误差热力图分析
 ├── metrics_results.py               # PSNR / SSIM / MAE 统计
 ├── crop_img.py                      # 感兴趣区域裁剪
