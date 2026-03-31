@@ -116,13 +116,14 @@
 - 多方法指标统计
 - 误差热力图、裁剪区域和时序分析
 
-当前主干代码已经按 `data / models / utils / engine / analysis` 进行了模块化整理：
+当前主干代码已经按 `data / models / utils / engine / analysis / legacy` 进行了模块化整理：
 
 - `data/` 负责数据集与掩码组织
 - `models/` 负责模型结构与核心组件
 - `utils/` 负责指标与可视化
 - `engine/` 负责配置对象、构建器、损失函数、训练循环与推理循环
 - `analysis/` 负责分析脚本共享的目录遍历、算法映射与结果解析
+- `legacy/` 负责统一归档已经被模块化吸收的旧入口与旧脚本实现
 
 如果你希望使用统一流水线入口，优先查看：
 
@@ -146,14 +147,15 @@ MALA/
 ├── utils/                           # 指标与可视化工具
 ├── engine/                          # 训练/推理/配置/构建器
 ├── analysis/                        # 分析脚本共享辅助模块
-├── MAE_LaMa.py                      # 原始研究型主脚本
+├── legacy/                          # 旧入口与历史脚本归档
+├── MAE_LaMa.py                      # 根目录兼容壳
 ├── train.py                         # 模块化后的训练入口
 ├── inference.py                     # 模块化后的推理入口
-├── error_heatmap.py                 # 误差热力图分析
-├── metrics_results.py               # PSNR / SSIM / MAE 统计
-├── crop_img.py                      # 感兴趣区域裁剪
-├── Scatter_one_to_one.py            # 散点一致性分析
-├── time_analysis_Crops.py           # 时序局部分析
+├── error_heatmap.py                 # 根目录兼容壳
+├── metrics_results.py               # 根目录兼容壳
+├── crop_img.py                      # 根目录兼容壳
+├── Scatter_one_to_one.py            # 根目录兼容壳
+├── time_analysis_Crops.py           # 根目录兼容壳
 └── integrated_vmae/                 # 整合后的完整流程版本
 ```
 
