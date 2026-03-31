@@ -116,12 +116,13 @@
 - 多方法指标统计
 - 误差热力图、裁剪区域和时序分析
 
-当前主干代码已经按 `data / models / utils / engine` 进行了模块化整理：
+当前主干代码已经按 `data / models / utils / engine / analysis` 进行了模块化整理：
 
 - `data/` 负责数据集与掩码组织
 - `models/` 负责模型结构与核心组件
 - `utils/` 负责指标与可视化
 - `engine/` 负责配置对象、构建器、损失函数、训练循环与推理循环
+- `analysis/` 负责分析脚本共享的目录遍历、算法映射与结果解析
 
 如果你希望使用统一流水线入口，优先查看：
 
@@ -144,6 +145,7 @@ MALA/
 ├── models/                          # 主模型组件
 ├── utils/                           # 指标与可视化工具
 ├── engine/                          # 训练/推理/配置/构建器
+├── analysis/                        # 分析脚本共享辅助模块
 ├── MAE_LaMa.py                      # 原始研究型主脚本
 ├── train.py                         # 模块化后的训练入口
 ├── inference.py                     # 模块化后的推理入口
@@ -163,6 +165,14 @@ MALA/
 conda create -n mala python=3.10
 conda activate mala
 pip install -r requirements.txt
+```
+
+如果你的数据不在默认的 `E:/lama/...` 目录，也可以通过环境变量覆盖：
+
+```bash
+export MALA_DATA_ROOT=/your/data/root
+export MALA_MASK_DIR=/your/masks
+export MALA_LAMA_INIT_DIR=/your/lama_init
 ```
 
 ### 2. 模型训练

@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
+import argparse
+from utils.paths import resolve_data_path
 
 class ImageAnalyzer:
     def __init__(self, experiment_root):
@@ -467,39 +469,25 @@ class ImageAnalyzer:
 
 # 使用示例
 if __name__ == "__main__":
-    # 初始化分析器
-    analyzer = ImageAnalyzer("E:/lama/experiment_results")
-    analyzer.discover_experiments_and_algorithms()
-    
-    # 定义矩形区域的四个点坐标
-    #? 建筑区域
-    # rect_points = [(650, 650), (850, 650), (850, 850), (650, 850)]# 左上、右上、右下、左下
-    #? 海洋区域
-    # rect_points = [(450, 1450), (650, 1450), (650, 1650), (450, 1650)]# 左上、右上、右下、左下
-    #? 陆地+海洋区域
-    # rect_points = [(300, 1250), (500, 1250), (500, 1450), (300, 1450)]# 左上、右上、右下、左下
-    #? 植被区域
-    # rect_points = [(0, 1250), (200, 1250), (200, 1450), (0, 1450)]# 左上、右上、右下、左下
-    #? heatmap分析区域
-    rect_points = [(100, 1550), (300, 1550), (300, 1750), (100, 1750)]# 左上、右上、右下、左下
+    parser = argparse.ArgumentParser(description="裁剪实验结果中的兴趣区域")
+    parser.add_argument("--experiment-root", default="E:/lama/experiment_results")
+    parser.add_argument("--output-dir", default="E:/lama/error_heatmap_cropped_images")
+    parser.add_argument("--rect-points", default="100,1550,300,1550,300,1750,100,1750")
+    args = parser.parse_args()
 
-    # 可视化裁剪区域
+    coords = [int(value) for value in args.rect_points.split(",")]
+    rect_points = [(coords[0], coords[1]), (coords[2], coords[3]), (coords[4], coords[5]), (coords[6], coords[7])]
+
+    analyzer = ImageAnalyzer(resolve_data_path(args.experiment_root))
+    analyzer.discover_experiments_and_algorithms()
+
     analyzer.visualize_cropped_region(rect_points)
-    
-    # 裁剪区域并保存图像（包括带标记的图像）
     cropped_images = analyzer.crop_region_from_images(
         rect_points, 
-        # output_dir="E:/lama/building_cropped_images",
-        # output_dir="E:/lama/ocean_cropped_images",
-        # output_dir="E:/lama/landOcean_cropped_images",
-        # output_dir="E:/lama/tree_cropped_images",
-        output_dir="E:/lama/error_heatmap_cropped_images",
+        output_dir=resolve_data_path(args.output_dir),
         save_marked_images=True  # 保存带裁剪区域标记的图像
     )
-    
-    # 创建对比可视化
-    # analyzer.create_comparison_visualization(rect_points, "exp1", "scene1", frame_index=0)
-    
+
     print("图像裁剪完成！输出三组图像：")
     print("1. 原始图像组：裁剪后的原始图像 + 带标记的原始图像")
     print("2. Masked图像组：裁剪后的masked图像 + 带标记的masked图像")

@@ -8,6 +8,8 @@ import seaborn as sns
 from matplotlib.patches import Rectangle
 import matplotlib.patches as mpatches
 import matplotlib.font_manager as fm
+import argparse
+from utils.paths import resolve_data_path
 
 class CroppedRegionTimeSeriesAnalyzer:
     def __init__(self, cropped_root):
@@ -657,36 +659,30 @@ class CroppedRegionTimeSeriesAnalyzer:
         print("="*100)
 
 # 使用示例
-def main():
-    # 创建分析器（使用裁剪后的目录）
-    analyzer = CroppedRegionTimeSeriesAnalyzer("E:/lama/landOcean_cropped_images")
-    
-    # 发现实验和算法
+def main(cropped_root="E:/lama/landOcean_cropped_images", exp_name="exp2_missing_ratios", scene_name="10percent", base_save_path="landOcean_region_timeseries_comparison"):
+    analyzer = CroppedRegionTimeSeriesAnalyzer(resolve_data_path(cropped_root))
     analyzer.discover_experiments_and_algorithms()
-    
-    # 分析指定实验的所有区域
     results = analyzer.analyze_all_regions(
-        # exp_name="exp1_missing_types", 
-        # scene_name="thin_cloud"
-        exp_name="exp2_missing_ratios", 
-        scene_name="10percent"
+        exp_name=exp_name,
+        scene_name=scene_name
     )
     
     if results:
-        # 分别绘制三组对比图并保存为三张单独的图片
         analyzer.plot_three_groups_separately(
             results, 
-            # "exp1_missing_types", 
-            # "thin_cloud",
-            "exp2_missing_ratios", 
-            "10percent",
-            base_save_path="landOcean_region_timeseries_comparison"
+            exp_name,
+            scene_name,
+            base_save_path=base_save_path
         )
-        
-        # 计算评估指标
         metrics = analyzer.calculate_region_metrics(results)
         if metrics:
             analyzer.print_region_metrics_table(metrics)
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="裁剪区域时序分析")
+    parser.add_argument("--cropped-root", default="E:/lama/landOcean_cropped_images")
+    parser.add_argument("--exp-name", default="exp2_missing_ratios")
+    parser.add_argument("--scene-name", default="10percent")
+    parser.add_argument("--base-save-path", default="landOcean_region_timeseries_comparison")
+    args = parser.parse_args()
+    main(args.cropped_root, args.exp_name, args.scene_name, args.base_save_path)

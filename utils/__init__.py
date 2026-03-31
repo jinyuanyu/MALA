@@ -27,6 +27,7 @@ from .visualization import (
     save_reconstructed_frames,
     create_mask_visualization
 )
+from .paths import env_or_default, normalize_path_text, resolve_data_path
 
 __all__ = [
     # 指标计算
@@ -44,5 +45,8 @@ __all__ = [
     'plot_scatter_1to1',
     'plot_timeseries',
     'save_reconstructed_frames',
-    'create_mask_visualization'
+    'create_mask_visualization',
+    'resolve_data_path',
+    'env_or_default',
+    'normalize_path_text'
 ]

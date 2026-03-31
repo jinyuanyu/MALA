@@ -4,21 +4,10 @@ import cv2
 import matplotlib.pyplot as plt
 from pathlib import Path
 import argparse
+from analysis.common import configure_matplotlib_chinese, get_algorithm_display_name
+from analysis.experiment import extract_frame_number, find_algorithm_output_images, iter_experiment_scenes
 
-# 算法名称映射字典
-ALGORITHM_NAMES = {
-    'DINEOF': '数据插值（DINEOF）',
-    'Proposed': '掩码自编码（MaskAE）',
-    'Lama': 'LaMA',
-    'Spline': '样条插值（Spline）',
-    'Nearest_Neighbor': '最近邻插值（NN）',
-    'EMAE': '方法一（EMAE）',
-    'MALA': '方法二（MALA）'
-}
-
-# 设置中文字体
-plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans']  # 用来正常显示中文标签
-plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+configure_matplotlib_chinese()
 
 def load_image(image_path, color_mode=cv2.IMREAD_COLOR):
     """加载图像"""
@@ -55,10 +44,6 @@ def calculate_error(original, processed, mask):
     error_masked = error * mask_binary
     
     return error_masked, mask_binary
-
-def get_algorithm_display_name(algorithm_name):
-    """获取算法的显示名称（中文）"""
-    return ALGORITHM_NAMES.get(algorithm_name, algorithm_name)
 
 def create_heatmap(error_data, mask_binary, output_path, frame_name, algorithm_name, 
                   rect_points=None, rect_label=None):
@@ -174,68 +159,28 @@ def process_experiment_results(base_dir="experiment_results", output_dir="error_
     # 创建输出目录
     output_path.mkdir(exist_ok=True)
     
-    # 遍历所有实验目录
-    for exp_dir in base_path.iterdir():
-        if not exp_dir.is_dir():
-            continue
-            
+    for exp_dir, scene_dir, images_dir in iter_experiment_scenes(base_path):
         print(f"处理实验: {exp_dir.name}")
-        
-        # 遍历每个实验下的场景目录（如thin_cloud）
-        for scene_dir in exp_dir.iterdir():
-            if not  .is_dir():
-                continue
-                
-            print(f"  处理场景: {scene_dir.name}")
-            
-            images_dir = scene_dir / "images"
-            if not images_dir.exists():
-                print(f"    跳过，未找到images目录: {images_dir}")
-                continue
-            
-            # 查找所有算法子目录
-            algorithm_dirs = [d for d in images_dir.iterdir() if d.is_dir()]
-            
-            if not algorithm_dirs:
-                print(f"    未找到算法子目录在: {images_dir}")
-                continue
-            
-            # 为当前场景创建输出目录
-            scene_output_dir = output_path / exp_dir.name / scene_dir.name
-            scene_output_dir.mkdir(parents=True, exist_ok=True)
-            
-            # 处理每个算法目录
-            for alg_dir in algorithm_dirs:
-                print(f"    处理算法: {alg_dir.name}")
-                
-                # 为当前算法创建输出目录
-                alg_output_dir = scene_output_dir / alg_dir.name
-                alg_output_dir.mkdir(exist_ok=True)
-                
-                # 查找所有处理后的图像
-                processed_images = list(alg_dir.glob("*_inpainted_frame*.png"))
-                
-                if not processed_images:
-                    # 如果没有inpainted图像，查找其他可能的处理图像
-                    processed_images = [f for f in alg_dir.glob("*.png") 
-                                      if not f.name.startswith(('mask_', 'original_', 'masked_'))]
-                
-                for processed_img_path in processed_images:
-                    # 提取帧编号
-                    filename = processed_img_path.name
-                    
-                    # 尝试不同的命名模式来提取帧编号
-                    frame_num = None
-                    if "frame" in filename:
-                        # 提取frame后的数字
-                        import re
-                        match = re.search(r'frame(\d+)', filename)
-                        if match:
-                            frame_num = match.group(1).zfill(2)
-                    
-                    if frame_num is None:
-                        print(f"      无法提取帧编号: {filename}")
-                        continue
+        print(f"  处理场景: {scene_dir.name}")
+        algorithm_dirs = [d for d in images_dir.iterdir() if d.is_dir()]
+        if not algorithm_dirs:
+            print(f"    未找到算法子目录在: {images_dir}")
+            continue
+
+        scene_output_dir = output_path / exp_dir.name / scene_dir.name
+        scene_output_dir.mkdir(parents=True, exist_ok=True)
+
+        for alg_dir in algorithm_dirs:
+            print(f"    处理算法: {alg_dir.name}")
+            alg_output_dir = scene_output_dir / alg_dir.name
+            alg_output_dir.mkdir(exist_ok=True)
+
+            for processed_img_path in find_algorithm_output_images(alg_dir):
+                filename = processed_img_path.name
+                frame_num = extract_frame_number(filename)
+                if frame_num is None:
+                    print(f"      无法提取帧编号: {filename}")
+                    continue
                     
                     # 查找对应的原始图像和掩码
                     original_path = images_dir / f"original_frame{frame_num}.png"
@@ -340,20 +285,12 @@ def example_usage():
 
 # 检测运行环境
 if __name__ == "__main__":
-    # 如果在Jupyter中运行，直接调用main函数
-    try:
-        import sys
-        if any('ipykernel' in arg for arg in sys.argv):
-            # 在Jupyter环境中，使用默认参数或示例参数
-            # 取消注释下面一行来使用示例矩形区域
-            example_usage()
-            # main()
-        else:
-            # 在命令行环境中，解析参数
-            parse_args_and_run()
-    except:
-        # 如果出错，使用默认参数
-        main()
+    import sys
+
+    if any('ipykernel' in arg for arg in sys.argv):
+        example_usage()
+    else:
+        parse_args_and_run()
 else:
     # 如果作为模块导入，可以直接调用main函数
     pass

@@ -18,6 +18,7 @@ from scipy.stats import gaussian_kde
 from PIL import Image
 from pathlib import Path
 import warnings
+import argparse
 warnings.filterwarnings('ignore')
 
 # 1. 自动扫描系统已有中文字体
@@ -292,21 +293,18 @@ def print_statistics_table(all_stats):
 
 # ============ 使用示例 ============
 if __name__ == "__main__":
-    # 输入文件路径
-    reference_image_path = './rgb_S2_Daily_Mosaic/pseudo_color_doy_019.png'
-    # reconstructed_image_path = './experiment_results/exp1_missing_types/thick_cloud/images/EMAE/emae_inpainted_frame00.png'
-    reconstructed_image_path = './experiment_results/exp1_missing_types/thick_cloud/images/MALA/mala_inpainted_frame00.png'
-    mask_image_path = './experiment_results/exp1_missing_types/thin_cloud/images/mask_frame00.png'
-    
-    # 输出文件路径
-    output_figure_path = './1to1_scatter.png'
-    
-    # 绘制图像
+    parser = argparse.ArgumentParser(description="绘制 1:1 学术散点图")
+    parser.add_argument("--reference-image-path", default='./rgb_S2_Daily_Mosaic/pseudo_color_doy_019.png')
+    parser.add_argument("--reconstructed-image-path", default='./experiment_results/exp1_missing_types/thick_cloud/images/MALA/mala_inpainted_frame00.png')
+    parser.add_argument("--mask-image-path", default='./experiment_results/exp1_missing_types/thin_cloud/images/mask_frame00.png')
+    parser.add_argument("--output-figure-path", default='./1to1_scatter.png')
+    args = parser.parse_args()
+
     fig, stats = plot_academic_1to1_scatter(
-        ref_img_path=reference_image_path,
-        rec_img_path=reconstructed_image_path,
-        mask_img_path=mask_image_path,
-        output_path=output_figure_path,
+        ref_img_path=args.reference_image_path,
+        rec_img_path=args.reconstructed_image_path,
+        mask_img_path=args.mask_image_path,
+        output_path=args.output_figure_path,
         band_names=['B2', 'B3', 'B4'],
         band_wavelengths=['490 nm', '560 nm', '665 nm'],
         use_density=True,
@@ -315,8 +313,5 @@ if __name__ == "__main__":
         fig_height=2.5
     )
     
-    # 打印统计表格
     print_statistics_table(stats)
-    
-    # 显示图像
     plt.show()

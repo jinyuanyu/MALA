@@ -22,6 +22,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL import Image
 from typing import Tuple, List, Optional, Dict
+from utils.paths import env_or_default, normalize_path_text, resolve_data_path
 
 
 class Datasets(Dataset):
@@ -53,7 +54,10 @@ class Datasets(Dataset):
             ocean_mask_path: 海洋掩码图像文件路径，用于排除海洋区域
         """
         self.data_dir = data_dir
+        self.resolved_data_dir = resolve_data_path(data_dir)
         self.max_seq_len = max_seq_len
+        self.mask_dir = resolve_data_path(env_or_default('MALA_MASK_DIR', 'E:/lama/mask_img'))
+        self.lama_dir = resolve_data_path(env_or_default('MALA_LAMA_INIT_DIR', 'E:/lama/inpainted_img/lama_init'))
         
         # 图像变换：转换为张量并归一化到[-1, 1]范围
         self.transform = transforms.Compose([
@@ -74,7 +78,7 @@ class Datasets(Dataset):
         
         # 加载海洋掩码（可选）
         if ocean_mask_path is not None:
-            ocean_mask = Image.open(ocean_mask_path).convert('L')
+            ocean_mask = Image.open(resolve_data_path(ocean_mask_path)).convert('L')
             self.ocean_mask = transforms.ToTensor()(ocean_mask).float()
         else:
             raise ValueError("必须提供海洋掩码路径ocean_mask_path")
@@ -90,9 +94,9 @@ class Datasets(Dataset):
         img_list = []
         fname_list = []
         
-        for frame_file in sorted(os.listdir(self.data_dir)):
+        for frame_file in sorted(os.listdir(self.resolved_data_dir)):
             if frame_file.endswith('.png') or frame_file.endswith('.jpg'):
-                frame_path = os.path.join(self.data_dir, frame_file)
+                frame_path = os.path.join(self.resolved_data_dir, frame_file)
                 image = Image.open(frame_path)
                 img_list.append(image)
                 
@@ -111,14 +115,13 @@ class Datasets(Dataset):
         返回:
             掩码张量，形状为 (num_masks, 1, height, width)，值域[0, 1]
         """
-        mask_dir = 'E:/lama/mask_img'
-        if not os.path.exists(mask_dir):
+        if not self.mask_dir or not os.path.exists(self.mask_dir):
             return None
             
         mask_list = []
-        for frame_file in sorted(os.listdir(mask_dir)):
+        for frame_file in sorted(os.listdir(self.mask_dir)):
             if frame_file.endswith('.png') or frame_file.endswith('.jpg'):
-                frame_path = os.path.join(mask_dir, frame_file)
+                frame_path = os.path.join(self.mask_dir, frame_file)
                 mask = Image.open(frame_path).convert('L')
                 mask_list.append(mask)
         
@@ -138,14 +141,13 @@ class Datasets(Dataset):
         返回:
             LaMa修复结果图像列表
         """
-        lama_dir = 'E:/lama/inpainted_img/lama_init'
-        if not os.path.exists(lama_dir):
+        if not self.lama_dir or not os.path.exists(self.lama_dir):
             return []
             
         lama_init = []
-        for frame_file in sorted(os.listdir(lama_dir)):
+        for frame_file in sorted(os.listdir(self.lama_dir)):
             if frame_file.endswith('.png') or frame_file.endswith('.jpg'):
-                frame_path = os.path.join(lama_dir, frame_file)
+                frame_path = os.path.join(self.lama_dir, frame_file)
                 image = Image.open(frame_path)
                 lama_init.append(image)
         
@@ -179,12 +181,13 @@ class Datasets(Dataset):
         lama_init = self.lama_init[:]
         
         # 根据数据路径选择掩码生成策略
-        if self.data_dir == 'E:/lama/masked_img/test_img/':
+        normalized_data_dir = normalize_path_text(self.data_dir)
+        if 'masked_img/test_img' in normalized_data_dir and self.mask_list is None:
             mask = self._generate_random_mask()
-        elif self.data_dir == 'E:/lama/jet_S2_Daily_Mosaic/' and self.mask_list is not None:
+        elif self.mask_list is not None:
             mask = self.mask_list[start_idx:end_idx]
         else:
-            raise ValueError('请为此数据路径设置正确的掩码策略')
+            mask = self._generate_random_mask()
         
         # 填充序列以达到最大长度
         if len(frames) < self.max_seq_len:
@@ -381,9 +384,12 @@ class Datasets_inference(Dataset):
             mask_ratio: 掩码缺失比例，范围0.0-1.0
         """
         self.data_dir = data_dir
+        self.resolved_data_dir = resolve_data_path(data_dir)
         self.max_seq_len = max_seq_len
         self.mask_type = mask_type
         self.mask_ratio = mask_ratio
+        self.mask_dir = resolve_data_path(env_or_default('MALA_MASK_DIR', 'E:/lama/mask_img'))
+        self.lama_dir = resolve_data_path(env_or_default('MALA_LAMA_INIT_DIR', 'E:/lama/inpainted_img/lama_init'))
         
         # 图像变换
         self.transform = transforms.Compose([
@@ -403,7 +409,7 @@ class Datasets_inference(Dataset):
         
         # 加载海洋掩码
         if ocean_mask_path is not None:
-            ocean_mask = Image.open(ocean_mask_path).convert('L')
+            ocean_mask = Image.open(resolve_data_path(ocean_mask_path)).convert('L')
             if hasattr(self, 'img_size'):
                 ocean_mask = ocean_mask.resize((self.img_size[0], self.img_size[1]))
             self.ocean_mask = transforms.ToTensor()(ocean_mask).float()
@@ -415,9 +421,9 @@ class Datasets_inference(Dataset):
         img_list = []
         fname_list = []
         
-        for frame_file in sorted(os.listdir(self.data_dir)):
+        for frame_file in sorted(os.listdir(self.resolved_data_dir)):
             if frame_file.endswith('.png') or frame_file.endswith('.jpg'):
-                frame_path = os.path.join(self.data_dir, frame_file)
+                frame_path = os.path.join(self.resolved_data_dir, frame_file)
                 image = Image.open(frame_path)
                 img_list.append(image)
                 fname = int(frame_file.split('.')[0].split('_')[-1])
@@ -427,14 +433,13 @@ class Datasets_inference(Dataset):
 
     def _load_mask(self) -> Optional[torch.Tensor]:
         """加载预定义的掩码图像序列"""
-        mask_dir = 'E:/lama/mask_img'
-        if not os.path.exists(mask_dir):
+        if not self.mask_dir or not os.path.exists(self.mask_dir):
             return None
             
         mask_list = []
-        for frame_file in sorted(os.listdir(mask_dir)):
+        for frame_file in sorted(os.listdir(self.mask_dir)):
             if frame_file.endswith('.png') or frame_file.endswith('.jpg'):
-                frame_path = os.path.join(mask_dir, frame_file)
+                frame_path = os.path.join(self.mask_dir, frame_file)
                 mask = Image.open(frame_path).convert('L')
                 mask_list.append(mask)
         
@@ -447,14 +452,13 @@ class Datasets_inference(Dataset):
 
     def _load_lama_init(self) -> List[Image.Image]:
         """加载LaMa模型的初始修复结果"""
-        lama_dir = 'E:/lama/inpainted_img/lama_init'
-        if not os.path.exists(lama_dir):
+        if not self.lama_dir or not os.path.exists(self.lama_dir):
             return []
             
         lama_init = []
-        for frame_file in sorted(os.listdir(lama_dir)):
+        for frame_file in sorted(os.listdir(self.lama_dir)):
             if frame_file.endswith('.png') or frame_file.endswith('.jpg'):
-                frame_path = os.path.join(lama_dir, frame_file)
+                frame_path = os.path.join(self.lama_dir, frame_file)
                 image = Image.open(frame_path)
                 lama_init.append(image)
         

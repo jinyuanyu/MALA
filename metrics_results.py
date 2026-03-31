@@ -7,6 +7,7 @@ from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import mean_squared_error
 import json
 import argparse
+from analysis.experiment import extract_frame_number, find_algorithm_output_images, iter_experiment_scenes
 
 def load_image(image_path, color_mode=cv2.IMREAD_COLOR):
     """加载图像"""
@@ -206,62 +207,25 @@ def process_experiment_results(base_dir="experiment_results", output_dir="metric
     # 存储所有结果
     all_results = []
     
-    # 遍历所有实验目录
-    for exp_dir in base_path.iterdir():
-        if not exp_dir.is_dir():
-            continue
-            
+    for exp_dir, scene_dir, images_dir in iter_experiment_scenes(base_path):
         print(f"处理实验: {exp_dir.name}")
-        
-        # 遍历每个实验下的场景目录
-        for scene_dir in exp_dir.iterdir():
-            if not scene_dir.is_dir():
-                continue
-                
-            print(f"  处理场景: {scene_dir.name}")
-            
-            images_dir = scene_dir / "images"
-            if not images_dir.exists():
-                print(f"    跳过，未找到images目录: {images_dir}")
-                continue
-            
-            # 查找所有算法子目录
-            algorithm_dirs = [d for d in images_dir.iterdir() if d.is_dir()]
-            
-            if not algorithm_dirs:
-                print(f"    未找到算法子目录在: {images_dir}")
-                continue
-            
-            # 处理每个算法目录
-            for alg_dir in algorithm_dirs:
-                print(f"    处理算法: {alg_dir.name}")
-                
-                # 查找所有处理后的图像
-                processed_images = list(alg_dir.glob("*_inpainted_frame*.png"))
-                
-                if not processed_images:
-                    # 如果没有inpainted图像，查找其他可能的处理图像
-                    processed_images = [f for f in alg_dir.glob("*.png") 
-                                      if not f.name.startswith(('mask_', 'original_', 'masked_'))]
-                
-                # 存储当前算法的所有帧结果
-                algorithm_results = []
-                
-                for processed_img_path in processed_images:
-                    # 提取帧编号
-                    filename = processed_img_path.name
-                    
-                    # 尝试不同的命名模式来提取帧编号
-                    frame_num = None
-                    if "frame" in filename:
-                        import re
-                        match = re.search(r'frame(\d+)', filename)
-                        if match:
-                            frame_num = match.group(1).zfill(2)
-                    
-                    if frame_num is None:
-                        print(f"      无法提取帧编号: {filename}")
-                        continue
+        print(f"  处理场景: {scene_dir.name}")
+        algorithm_dirs = [d for d in images_dir.iterdir() if d.is_dir()]
+        if not algorithm_dirs:
+            print(f"    未找到算法子目录在: {images_dir}")
+            continue
+
+        for alg_dir in algorithm_dirs:
+            print(f"    处理算法: {alg_dir.name}")
+            processed_images = find_algorithm_output_images(alg_dir)
+            algorithm_results = []
+
+            for processed_img_path in processed_images:
+                filename = processed_img_path.name
+                frame_num = extract_frame_number(filename)
+                if frame_num is None:
+                    print(f"      无法提取帧编号: {filename}")
+                    continue
                     
                     # 查找对应的原始图像和掩码
                     original_path = images_dir / f"original_frame{frame_num}.png"
@@ -391,18 +355,12 @@ def parse_args_and_run():
 
 # 检测运行环境
 if __name__ == "__main__":
-    # 如果在Jupyter中运行，直接调用main函数
-    try:
-        import sys
-        if any('ipykernel' in arg for arg in sys.argv):
-            # 在Jupyter环境中，使用默认参数
-            main()
-        else:
-            # 在命令行环境中，解析参数
-            parse_args_and_run()
-    except:
-        # 如果出错，使用默认参数
+    import sys
+
+    if any('ipykernel' in arg for arg in sys.argv):
         main()
+    else:
+        parse_args_and_run()
 else:
     # 如果作为模块导入，可以直接调用main函数
     pass
