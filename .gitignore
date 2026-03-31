@@ -1,64 +1,18 @@
-# Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
 
-# PyTorch
+.DS_Store
+.ipynb_checkpoints/
+
+.pytest_cache/
+.mypy_cache/
+
+results/
+checkpoints/
+
 *.pth
 *.pt
-checkpoints/
 *.ckpt
 
-# Jupyter
-.ipynb_checkpoints
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Data (if large)
-# data/raw/
-# data/processed/
-
-# Logs
-*.log
-logs/
-
-# Models (large files)
-# *.pth
-# *.pt
-
-# Temporary
-tmp/
-temp/
-*.tmp
-
-# Local remote-sensing datasets and generated assets
-S2_Daily_Mosaic_Masked/
-rgb_S2_Daily_Mosaic/
 *.nc
-integrated_vmae/__pycache__/

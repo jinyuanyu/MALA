@@ -125,6 +125,13 @@
 - `analysis/` 负责分析脚本共享的目录遍历、算法映射与结果解析
 - `legacy/` 负责统一归档已经被模块化吸收的旧入口与旧脚本实现
 
+根目录中的 `MAE_LaMa.py`、`error_heatmap.py`、`metrics_results.py` 等文件现在只承担“兼容入口”的职责，便于旧命令、旧 notebook 和历史实验脚本继续运行。新的开发和扩展，建议优先从下面这些模块目录进入：
+
+- 训练与推理逻辑优先查看 `engine/`
+- 数据读取与掩码策略优先查看 `data/`
+- 指标统计与结果分析优先查看 `analysis/`
+- 历史实现与旧版流程统一查看 `legacy/`
+
 如果你希望使用统一流水线入口，优先查看：
 
 - `integrated_vmae/vmae_pipeline.py`
@@ -135,13 +142,19 @@
 - `inference.py`
 - `MAE_LaMa.py`
 
+如果你希望查看研究过程中的 notebook，统一查看：
+
+- `notebooks/`
+
 ## 仓库结构
 
 ```text
 MALA/
 ├── README.md
+├── .gitignore                       # 缓存/权重/系统文件忽略规则
 ├── docs/figures/                    # README 使用的三张核心图
 ├── docs/MODULARIZATION.md           # 模块化结构说明
+├── notebooks/                       # 研究与调试 notebook
 ├── data/                            # 数据读取与数据集定义
 ├── models/                          # 主模型组件
 ├── utils/                           # 指标与可视化工具
